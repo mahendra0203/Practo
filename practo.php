@@ -226,13 +226,7 @@ class Practo{
 	}
 	
 	protected function make_request($data){
-		if($data == 'profile'){
-			$url = "https://solo.practo.com/practice/profile";
-		}elseif($data == 'settings'){
-			$url = "https://solo.practo.com/practice/settings";
-		}elseif($data == 'subscription'){
-			$url = "https://solo.practo.com/practice/subscription";
-		}
+		$url = "https://solo.practo.com/practice/".$data;
 		$ch = curl_init();
 		curl_setopt($ch,CURLOPT_URL,$url);
 		curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
