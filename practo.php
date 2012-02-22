@@ -1,4 +1,33 @@
 <?php
+	function call_server($auth_token,$url,$method,$data = null){
+		$ch = curl_init();
+		curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
+		if($method == 'POST'){
+			$request_url = "https://solo.practo.com". $url;
+			curl_setopt($ch,CURLOPT_POST,1);
+			curl_setopt($ch,CURLOPT_POSTFIELDS,$data);
+		}else if ($method == 'PATCH'){
+			curl_setopt($ch,CURLOPT_CUSTOMREQUEST,"PATCH");
+			$request_url = "https://solo.practo.com".$url;
+		}else if($method == 'DELETE'){
+			curl_setopt($ch,CURLOPT_CUSTOMREQUEST,"DELETE");
+			$request_url = "https://solo.practo.com".$url;
+		}else{
+			$request_url = "https://solo.practo.com".$url;
+		}
+		$token_header = 'X-AUTH-TOKEN:'. $auth_token;
+		curl_setopt($ch,CURLOPT_HTTPHEADER,array($token_header));
+		curl_setopt($ch,CURLOPT_URL,$request_url);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		$resp = curl_exec($ch);
+		if(curl_errno($ch))
+		{
+			curl_close($ch);
+			throw new Exception("Curl Error: " . curl_error($ch));
+		}
+		curl_close($ch);
+		return $resp;
+	 }
 
 class Patient{
 	private $_auth_token;
@@ -14,41 +43,40 @@ class Patient{
 
 	function create(array $patient_info){
 		$url = "/patients";
-		$method ="POST";
 		if((!$patient_info['name']) || (strlen($patient_info['name']) == 0)){
 			throw new Exception("Patient info array does not contain name");
 		}
 		$data = http_build_query($patient_info);
-		$response = $this->call_server($url,"POST",$data);
+		$response = call_server($this->auth_token,$url,"POST",$data);
 		//echo $response;
 		return json_decode($response,true);
 	}
 	
 	function read($patient_id){
-		$url = 'https://solo.practo.com/patients/' .$patient_id;
-		$response = $this->call_server($url,"GET");
+		$url = '/patients/' .$patient_id;
+		$response = call_server($this->auth_token,$url,"GET");
 		//echo $response;
 		return json_decode($response, true);
 	}
 	
 	function read_all(){
-		$url = 'https://solo.practo.com/patients' ;
-		$response = $this->call_server($url,"GET");
+		$url = '/patients' ;
+		$response = call_server($this->auth_token,$url,"GET");
 		//echo $response;
 		return json_decode($response, true);
 	}
 	
 	function edit($patient_id, array $info){
 		$data = http_build_query($info);
-		$url = "https://solo.practo.com/patients/".$patient_id ."?".$data;
-		$response = $this->call_server($url,"PATCH",$data);
+		$url = "/patients/".$patient_id ."?".$data;
+		$response = call_server($this->auth_token,$url,"PATCH",$data);
 		//echo $response;
 		return json_decode($response,true);
 	}
 	
 	function delete($patient_id){
-		$url = "https://solo.practo.com/patients/". $patient_id;
-		$response = $this->call_server($url,"DELETE");
+		$url = "/patients/". $patient_id;
+		$response = call_server($this->auth_token,$url,"DELETE");
 		//echo $response;
 		return json_decode($response,true);
 	
@@ -56,16 +84,16 @@ class Patient{
 	
 	function modified_before(DateTime $datetime){
 		$date_str = $datetime->format("Y-m-d H:i:s");
-		$url = "https://solo.practo.com/patients?modified_before=". $date_str;
-		$response = $this->call_server($url,"GET");
+		$url = "/patients?modified_before=". $date_str;
+		$response = call_server($this->auth_token,$url,"GET");
 		////echo $response;
 		return json_decode($response,true);
 	}
 	
 	function modified_after(DateTime $datetime){
 		$date_str = $datetime->format("Y-m-d H:i:s");
-		$url = "https://solo.practo.com/patients?modified_after=". $date_str;
-		$response = $this->call_server($url,"GET");
+		$url = "/patients?modified_after=". $date_str;
+		$response = call_server($this->auth_token,$url,"GET");
 		return json_decode($response,true);
 	}
 	
@@ -75,13 +103,13 @@ class Patient{
 				throw new Exception("Value of with_deleted is not boolean");
 			}
 			$val = $with_deleted? 'true':'false';
-			$url = "https://solo.practo.com/patients/count?with_deleted=". $val;
-			$response = $this->call_server($url,"GET");
+			$url = "/patients/count?with_deleted=". $val;
+			$response = call_server($this->auth_token,$url,"GET");
 			////echo $response;
 			return json_decode($response,true);
 		}else{
-			$url = "https://solo.practo.com/patients/count";
-			$response = $this->call_server($url,"GET");
+			$url = "/patients/count";
+			$response = call_server($this->auth_token,$url,"GET");
 			////echo $response;
 			return json_decode($response,true);
 		}
@@ -109,15 +137,15 @@ class Patient{
 		}
 		$arg_array = array_combine($arg_keys,$arg_values);
 		$data = http_build_query($arg_array);
-		$url = "https://solo.practo.com/patients?".$data;
-		$response = $this->call_server($url,"GET");
+		$url = "/patients?".$data;
+		$response = call_server($this->auth_token,$url,"GET");
 		////echo $response;
 		return json_decode($response,true);
 	}
 	
 	function read_till($number){
-		$url = "https://solo.practo.com/patients?limit=".$number;
-		$response = $this->call_server($url,"GET");
+		$url = "/patients?limit=".$number;
+		$response = call_server($this->auth_token,$url,"GET");
 		////echo $response;
 		return json_decode($response,true);
 	}
@@ -127,40 +155,11 @@ class Patient{
 			throw new Exception("Input is not a boolean");
 		}
 		$val = $ip? 'true':'false';
-		$url = "https://solo.practo.com/patients?with_deleted=". $val;
-		$response = $this->call_server($url,"GET");
+		$url = "/patients?with_deleted=". $val;
+		$response = call_server($this->auth_token,$url,"GET");
 		////echo $response;
 		return json_decode($response,true);
 	}
-	private function call_server($url,$method,$data = null){
-		$ch = curl_init();
-		curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
-		if($method == 'POST'){
-			$request_url = "https://solo.practo.com". $url;
-			curl_setopt($ch,CURLOPT_POST,1);
-			curl_setopt($ch,CURLOPT_POSTFIELDS,$data);
-		}else if ($method == 'PATCH'){
-			curl_setopt($ch,CURLOPT_CUSTOMREQUEST,"PATCH");
-			$request_url = $url;
-		}else if($method == 'DELETE'){
-			curl_setopt($ch,CURLOPT_CUSTOMREQUEST,"DELETE");
-			$request_url = $url;
-		}else{
-			$request_url = $url;
-		}
-		$token_header = 'X-AUTH-TOKEN:'. $this->auth_token;
-		curl_setopt($ch,CURLOPT_HTTPHEADER,array($token_header));
-		curl_setopt($ch,CURLOPT_URL,$request_url);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		$resp = curl_exec($ch);
-		if(curl_errno($ch))
-		{
-			curl_close($ch);
-			throw new Exception("Curl Error: " . curl_error($ch));
-		}
-		curl_close($ch);
-		return $resp;
-	 }
 }
 
 class Appointment{
@@ -172,6 +171,9 @@ class Appointment{
 	function update($auth_token){
 		$this->auth_token = $auth_token;
 	}
+	function sample(){
+		call_server("hi");
+	}	
 }
 class Practo{
 	public $value = "test";
@@ -183,7 +185,7 @@ class Practo{
 	function Practo(array $ip_cred){
 		if($ip_cred){
 			if($ip_cred['username'] && $ip_cred['password']){
-				$response = $this->call_server($ip_cred);
+				$response = $this->login_request($ip_cred);
 				////echo $response;
 				/*Parse the response*/
 				if(!$response){
@@ -211,41 +213,24 @@ class Practo{
 	
 	
 	function get_practice_profile(){
-		$return_array = $this->make_request('profile');
-		return $return_array;
+		$url = "/practice/profile";
+		$return_array = call_server($this->auth_token,$url,"GET");
+		return json_decode($return_array,true);
 	}
 	
 	function get_practice_settings(){
-		$return_array = $this->make_request('settings');
-		return $return_array;
+		$url = "/practice/settings";
+		$return_array = call_server($this->auth_token,$url,"GET");
+		return json_decode($return_array,true);
 	}
 	
 	function get_practice_subscription(){
-		$return_array = $this->make_request('subscription');
-		return $return_array;
+		$url = "/practice/subscription";
+		$return_array = call_server($this->auth_token,$url,"GET");
+		return json_decode($return_array,true);
 	}
 	
-	protected function make_request($data){
-		$url = "https://solo.practo.com/practice/".$data;
-		$ch = curl_init();
-		curl_setopt($ch,CURLOPT_URL,$url);
-		curl_setopt($ch,CURLOPT_RETURNTRANSFER,1);
-		$token_header = 'X-AUTH-TOKEN:'. $this->auth_token;
-		curl_setopt($ch,CURLOPT_HTTPHEADER,array($token_header));
-		curl_setopt($ch,CURLOPT_SSL_VERIFYPEER,false);
-		$resp = curl_exec($ch);
-		if(curl_errno($ch))
-		{
-			curl_close($ch);
-			throw new Exception("Curl Error: " . curl_error($ch));
-		}
-		curl_close($ch);
-		//echo $resp;
-		$return_array = json_decode($resp,true);
-		return $return_array;
-	
-	}
-	protected function call_server(array $ip_cred){
+	protected function login_request(array $ip_cred){
 		$url = "https://solo.practo.com/sessions";
 		$ch = curl_init();
 		curl_setopt($ch,CURLOPT_URL,$url);
